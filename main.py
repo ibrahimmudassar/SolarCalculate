@@ -138,5 +138,5 @@ fig.add_trace(go.Scatter(
               mode='none'
               ))
 
-fig.write_image("fig1.png", width=1920, length=1080)
+fig.write_image("fig1.png", width=1920, height=1080)
 embed_to_discord()
