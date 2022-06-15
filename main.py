@@ -39,7 +39,8 @@ def embed_to_discord():
     webhook = DiscordWebhook(url=env.list("WEBHOOKS"))
 
     # create embed object for webhook
-    embed = DiscordEmbed(title="Sun Position Today", color="ffff00")
+    today = datetime.now().astimezone(pytz.timezone('US/Eastern')).strftime("%Y %m %d")
+    embed = DiscordEmbed(title=f"Sun Position Today {today}", color="ffff00")
 
     # image
     with open("fig1.png", "rb") as f:
@@ -138,5 +139,5 @@ fig.add_trace(go.Scatter(
               mode='none'
               ))
 
-fig.write_image("fig1.png")
+fig.write_image("fig1.png", width=1920, length=1080)
 embed_to_discord()
