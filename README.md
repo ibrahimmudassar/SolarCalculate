@@ -8,4 +8,6 @@ to change where this webhook goes to change the webhook environment variable.
 
 it outputs a plotly graph as a png but you can modify it
 
+Based on @mperezcorrales SunPositionCalculator
+
 ![Embed Example](https://i.ibb.co/Jrv6tsB/fig1.png) <br />
