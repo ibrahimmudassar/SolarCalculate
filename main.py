@@ -1,5 +1,4 @@
 from datetime import datetime
-from tkinter import font
 
 import plotly.graph_objects as go
 import pytz
