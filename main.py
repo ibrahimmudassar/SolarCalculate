@@ -101,7 +101,7 @@ fig.add_trace(go.Scatter(
 ))
 
 # I don't want to show every 15 minute interval because it gets messy
-fig.update_xaxes(nticks=24)
+fig.update_xaxes(nticks=12)
 
 # Hides the legend because it includes extraneous information
 fig.update_layout(showlegend=False)
@@ -138,5 +138,5 @@ fig.add_trace(go.Scatter(
               mode='none'
               ))
 
-fig.write_image("fig1.png", width=1920, height=1080)
+fig.write_image("fig1.png")
 embed_to_discord()
