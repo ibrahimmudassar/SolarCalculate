@@ -22,7 +22,7 @@ def iso_to_datetime_str(x):
 
 
 data = requests.get(
-    "https://api.sunrise-sunset.org/json?lat=40.57&lng=-74.32&formatted=0").json()['results']
+    "https://api.sunrise-sunset.org/json?lat=40.57&lng=-74.32&formatted=0", ssl=False).json()['results']
 
 astronomical_twilight_begin = iso_to_datetime_str(
     data['astronomical_twilight_begin'])
