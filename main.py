@@ -5,7 +5,6 @@ import pytz
 import requests
 from discord_webhook import DiscordEmbed, DiscordWebhook  # Connect to discord
 from environs import Env  # For environment variables
-
 from SimplePythonSunPositionCalculator import getSEA
 
 # Setting up environment variables
@@ -22,7 +21,7 @@ def iso_to_datetime_str(x):
 
 
 data = requests.get(
-    "https://api.sunrise-sunset.org/json?lat=40.57&lng=-74.32&formatted=0", verify=False).json()['results']
+    "https://api.sunrise-sunset.org/json?lat=40.57&lng=-74.32&formatted=0").json()['results']
 
 astronomical_twilight_begin = iso_to_datetime_str(
     data['astronomical_twilight_begin'])
@@ -58,10 +57,16 @@ def embed_to_discord():
 sun_angle_list = []
 time_list = []
 
+# calculates the difference in hours between UTC and any timezone in this case US Eastern
+utc_offset = datetime.now(pytz.timezone('US/Eastern'))
+utc_offset = int(utc_offset.utcoffset().total_seconds()/3600)
+
+lat = 40.57
+long = -74.32
 
 for h in range(24):
     for m in range(0, 60, 1):
-        angle = getSEA(40.57, -74.32, -4, hour=h, minute=m,
+        angle = getSEA(lat, long, utc_offset, hour=h, minute=m,
                        day_of_year=datetime.now().timetuple()[7])
         sun_angle_list.append(angle)
         time_list.append(f'{h:02}:{m:02}')
