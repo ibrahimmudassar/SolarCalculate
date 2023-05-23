@@ -2,5 +2,5 @@ discord_webhook==0.14.0
 environs==9.4.0
 plotly==5.8.0
 pytz==2021.3
-requests==2.27.1
+requests==2.31.0
 kaleido
