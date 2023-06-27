@@ -1,11 +1,32 @@
 from datetime import datetime
 
+import ephem
+import humanize
 import plotly.graph_objects as go
 import pytz
 import requests
 from discord_webhook import DiscordEmbed, DiscordWebhook  # Connect to discord
 from environs import Env  # For environment variables
+
 from SimplePythonSunPositionCalculator import getSEA
+
+
+def get_next_equinox_or_solstice(lat, long):    
+    # create an observer object for your location
+    observer = ephem.Observer()
+    observer.lat = lat
+    observer.lon = long
+
+    # get the next equinox and solstice
+    next_equinox = ephem.next_equinox(observer.date)
+    next_solstice = ephem.next_solstice(observer.date)
+
+    # find which one is closer
+    next_event = min([next_equinox.datetime(), next_solstice.datetime()])
+
+    # calculate and return the time until then
+    return humanize.naturaldelta(datetime.now() - next_event)
+
 
 # Setting up environment variables
 env = Env()
@@ -19,9 +40,10 @@ def iso_to_datetime_str(x):
     z = y.astimezone(pytz.timezone('US/Eastern'))
     return z.strftime("%H:%M")
 
-
+lat = float(env("LATITUDE"))
+long = float(env("LONGITUDE"))
 data = requests.get(
-    "https://api.sunrise-sunset.org/json?lat=40.57&lng=-74.32&formatted=0").json()['results']
+    F"https://api.sunrise-sunset.org/json?lat={lat}&lng={long}&formatted=0").json()['results']
 
 astronomical_twilight_begin = iso_to_datetime_str(
     data['astronomical_twilight_begin'])
@@ -33,24 +55,30 @@ astronomical_twilight_end = iso_to_datetime_str(
 
 
 def embed_to_discord():
-    # Webhooks to send to
-    webhook = DiscordWebhook(url=env.list("WEBHOOKS"))
-
     # create embed object for webhook
     today = datetime.now().astimezone(pytz.timezone('US/Eastern')).strftime("%Y %m %d")
     embed = DiscordEmbed(title=f"Sun Position Today {today}", color="ffff00")
 
-    # image
-    with open("fig1.png", "rb") as f:
-        webhook.add_file(file=f.read(), filename='fig1.png')
     embed.set_image(url='attachment://fig1.png')
 
+    # add fields to embed
+    embed.add_embed_field(name='Next Solar Event', value=get_next_equinox_or_solstice(lat, long))
+    
+    embed.add_embed_field(name='Daylight Length', value=humanize.precisedelta(datetime.fromisoformat(data['sunset']) - datetime.fromisoformat(data['sunrise']), minimum_unit="minutes"))
+
     # set footer
-    embed.set_footer(text='Made by Ibby With ❤️')
+    embed.set_footer(text='Made By Ibby With ❤️', icon_url='https://avatars.githubusercontent.com/u/22484328?v=4')
 
     # add embed object to webhook(s)
-    webhook.add_embed(embed)
-    webhook.execute()
+    for url in env.list("WEBHOOKS"):
+        webhook = DiscordWebhook(url=url)
+        
+        # image
+        with open("fig1.png", "rb") as f:
+            webhook.add_file(file=f.read(), filename='fig1.png')
+
+        webhook.add_embed(embed)
+        webhook.execute()
 
 
 # list of angles and their respective times that they happen at
@@ -61,11 +89,8 @@ time_list = []
 utc_offset = datetime.now(pytz.timezone('US/Eastern'))
 utc_offset = int(utc_offset.utcoffset().total_seconds()/3600)
 
-lat = 40.57
-long = -74.32
-
 for h in range(24):
-    for m in range(0, 60, 1):
+    for m in range(0, 60):
         angle = getSEA(lat, long, utc_offset, hour=h, minute=m,
                        day_of_year=datetime.now().timetuple()[7])
         sun_angle_list.append(angle)
@@ -104,6 +129,12 @@ fig.add_trace(go.Scatter(
         color="black"
     )
 ))
+
+# Add noon line
+fig.add_shape(type="line",
+    x0='12:00', y0=min(sun_angle_list), x1='12:00', y1=sun_angle_list[time_list.index('12:00')],
+    line=dict(color="#636efa"),line_dash="dash",
+)
 
 # I don't want to show every 15 minute interval because it gets messy
 fig.update_xaxes(nticks=12)
