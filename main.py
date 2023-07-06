@@ -11,26 +11,42 @@ from environs import Env  # For environment variables
 from SimplePythonSunPositionCalculator import getSEA
 
 
-def get_next_equinox_or_solstice(lat, long):    
+def get_next_equinox_or_solstice(lat, long):
     # create an observer object for your location
     observer = ephem.Observer()
     observer.lat = lat
     observer.lon = long
 
     # get the next equinox and solstice
-    next_equinox = ephem.next_equinox(observer.date)
-    next_solstice = ephem.next_solstice(observer.date)
+    next_equinox = (ephem.next_equinox(observer.date).datetime(), "Equinox")
+    next_solstice = (ephem.next_solstice(observer.date).datetime(), "Solstice")
 
     # find which one is closer
-    next_event = min([next_equinox.datetime(), next_solstice.datetime()])
+    next_event = min([next_equinox, next_solstice], key=lambda x: x[0])
 
     # calculate and return the time until then
-    return humanize.naturaldelta(datetime.now() - next_event)
+    return next_event
 
 
 # Setting up environment variables
 env = Env()
 env.read_env()  # read .env file, if it exists
+
+
+def format_td(x):
+    # convert timedelta to seconds
+    total_seconds = x.total_seconds()
+
+    # calculate hours, minutes, and seconds
+    hours, remainder = divmod(total_seconds, 3600)
+    minutes, seconds = divmod(remainder, 60)
+
+    # float to str with zeropad
+    hours = str(int(hours)).zfill(2)
+    minutes = str(int(minutes)).zfill(2)
+    seconds = str(int(seconds)).zfill(2)
+
+    return f'{hours}:{minutes}:{seconds}'
 
 
 def iso_to_datetime_str(x):
@@ -39,6 +55,7 @@ def iso_to_datetime_str(x):
     y = datetime.fromisoformat(x)
     z = y.astimezone(pytz.timezone('US/Eastern'))
     return z.strftime("%H:%M")
+
 
 lat = float(env("LATITUDE"))
 long = float(env("LONGITUDE"))
@@ -62,17 +79,21 @@ def embed_to_discord():
     embed.set_image(url='attachment://fig1.png')
 
     # add fields to embed
-    embed.add_embed_field(name='Next Solar Event', value=get_next_equinox_or_solstice(lat, long))
-    
-    embed.add_embed_field(name='Daylight Length', value=humanize.precisedelta(datetime.fromisoformat(data['sunset']) - datetime.fromisoformat(data['sunrise']), minimum_unit="minutes"))
+    date_of_event, event_type = get_next_equinox_or_solstice(lat, long)
+    embed.add_embed_field(name=f'Next {event_type}', value=humanize.naturaldelta(
+        datetime.now() - date_of_event))
+
+    embed.add_embed_field(name='Daylight Length', value=format_td(
+        datetime.fromisoformat(data['sunset']) - datetime.fromisoformat(data['sunrise'])))
 
     # set footer
-    embed.set_footer(text='Made By Ibby With ❤️', icon_url='https://avatars.githubusercontent.com/u/22484328?v=4')
+    embed.set_footer(text='Made By Ibby With ❤️',
+                     icon_url='https://avatars.githubusercontent.com/u/22484328?v=4')
 
     # add embed object to webhook(s)
     for url in env.list("WEBHOOKS"):
         webhook = DiscordWebhook(url=url)
-        
+
         # image
         with open("fig1.png", "rb") as f:
             webhook.add_file(file=f.read(), filename='fig1.png')
@@ -129,12 +150,6 @@ fig.add_trace(go.Scatter(
         color="black"
     )
 ))
-
-# Add noon line
-fig.add_shape(type="line",
-    x0='12:00', y0=min(sun_angle_list), x1='12:00', y1=sun_angle_list[time_list.index('12:00')],
-    line=dict(color="#636efa"),line_dash="dash",
-)
 
 # I don't want to show every 15 minute interval because it gets messy
 fig.update_xaxes(nticks=12)
